@@ -1,6 +1,6 @@
 {
-  "name": "Developer Snippet Hub",
-  "short_name": "SnippetHub",
+  "name": "Dev-Vault",
+  "short_name": "Dev-Vault",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#0f1115",

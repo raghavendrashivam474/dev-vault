@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snippet-hub-v1';
+const CACHE_NAME = 'Dev-Vault-v1';
 const urlsToCache = [
   '/',
   '/index.html',

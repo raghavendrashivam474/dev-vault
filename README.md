@@ -1,8 +1,8 @@
-# Developer Snippet Hub
+# Dev-Vault
 
 A lightweight, offline-first developer utility for capturing, organizing, searching, and reusing frequently referenced code snippets.
 
-Developer Snippet Hub is intentionally small: it provides a focused workflow for storing snippets without requiring an account, backend service, database, or external dependency. Everything runs locally in the browser and remains available offline through the Progressive Web App architecture.
+Dev-Vault is intentionally small: it provides a focused workflow for storing snippets without requiring an account, backend service, database, or external dependency. Everything runs locally in the browser and remains available offline through the Progressive Web App architecture.
 
 **Live:** `https://cozy-boba-e7e30b.netlify.app/`
 
@@ -24,7 +24,7 @@ Developers repeatedly encounter the same small pieces of code:
 
 These snippets often end up scattered across notes, browser bookmarks, chat history, documentation, or temporary files.
 
-Developer Snippet Hub provides a dedicated, minimal workspace for that information.
+Dev-Vault provides a dedicated, minimal workspace for that information.
 
 The application focuses on four operations:
 
@@ -76,7 +76,7 @@ The selected preference is persisted locally so the interface remains consistent
 
 ### Progressive Web App
 
-Developer Snippet Hub is installable as a Progressive Web App.
+Dev-Vault is installable as a Progressive Web App.
 
 The application includes:
 
@@ -273,7 +273,7 @@ Snippet content is stored locally through browser storage.
 
 However, local browser storage should not be treated as a secure secrets vault.
 
-**Do not use Developer Snippet Hub as a password manager or for storing highly sensitive credentials, private keys, API secrets, or other security-critical material.**
+**Do not use Dev-Vault as a password manager or for storing highly sensitive credentials, private keys, API secrets, or other security-critical material.**
 
 ---
 
@@ -284,7 +284,7 @@ The project is intentionally compact.
 A typical deployment consists of the application entry point, styling, client-side logic, PWA metadata, service worker, and application icons.
 
 ```text
-developer-snippet-hub/
+Dev-Vault/
 │
 ├── index.html
 ├── style.css
@@ -309,7 +309,7 @@ Clone the repository:
 
 ```bash
 git clone <REPOSITORY_URL>
-cd developer-snippet-hub
+cd Dev-Vault
 ```
 
 Serve the directory using any local static HTTP server.
@@ -437,7 +437,7 @@ See the [`LICENSE`](./LICENSE) file for the complete license text.
 
 ## Philosophy
 
-Developer Snippet Hub is deliberately not a platform.
+Dev-Vault is deliberately not a platform.
 
 It is a small piece of developer infrastructure built around a simple observation:
 
