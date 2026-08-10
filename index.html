@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snippet Hub</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Google Fonts for modern typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header glass">
+            <h1>Snippet Hub</h1>
+            <div class="header-actions">
+                <input type="text" id="searchInput" placeholder="Search snippets..." class="search-input">
+                <button id="themeToggleBtn" class="icon-btn" title="Toggle Theme">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+                <button id="addBtn" class="primary-btn">+ Add Snippet</button>
+            </div>
+        </header>
+
+        <main class="snippets-grid" id="snippetsContainer">
+            <!-- Snippets will be injected here via JS -->
+        </main>
+    </div>
+
+    <!-- Modal for adding snippet -->
+    <div class="modal-overlay" id="addModal" style="display: none;">
+        <div class="modal glass">
+            <h2>Add New Snippet</h2>
+            <form id="snippetForm">
+                <div class="form-group">
+                    <label for="titleInput">Title</label>
+                    <input type="text" id="titleInput" required placeholder="e.g. Fetch API Boilerplate">
+                </div>
+                <div class="form-group">
+                    <label for="languageInput">Language</label>
+                    <select id="languageInput">
+                        <option value="javascript">JavaScript</option>
+                        <option value="html">HTML</option>
+                        <option value="css">CSS</option>
+                        <option value="python">Python</option>
+                        <option value="bash">Bash</option>
+                        <option value="plaintext">Plain Text</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="codeInput">Code</label>
+                    <textarea id="codeInput" required rows="6" placeholder="Paste your code here..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="cancelBtn" class="secondary-btn">Cancel</button>
+                    <button type="submit" class="primary-btn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
