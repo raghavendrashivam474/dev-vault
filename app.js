@@ -15,7 +15,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // State
-    let snippets = JSON.parse(localStorage.getItem('snippets')) || [];
+    let snippets = JSON.parse(localStorage.getItem('snippets'));
+    if (!snippets || snippets.length === 0) {
+        snippets = [
+            {
+                id: Date.now().toString() + '3',
+                title: 'Kill process on port',
+                language: 'bash',
+                code: '#!/bin/bash\nlsof -ti :3000 | xargs kill',
+                date: new Date().toISOString()
+            },
+            {
+                id: Date.now().toString() + '2',
+                title: 'Find large files',
+                language: 'bash',
+                code: 'find . -type f -size +100M -exec ls -lh {} \\;',
+                date: new Date().toISOString()
+            },
+            {
+                id: Date.now().toString() + '1',
+                title: 'Fetch JSON with async/await',
+                language: 'javascript',
+                code: 'async function getData(url) {\n    try {\n        const response = await fetch(url);\n        if (!response.ok) throw new Error(`Status: ${response.status}`);\n        return await response.json();\n    } catch (error) {\n        console.error("Fetch error:", error);\n    }\n}',
+                date: new Date().toISOString()
+            }
+        ];
+        localStorage.setItem('snippets', JSON.stringify(snippets));
+    }
 
     // Initialize
     renderSnippets();
@@ -85,6 +111,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderSnippets(filter = '') {
         snippetsContainer.innerHTML = '';
+        const snippetCount = document.getElementById('snippetCount');
+        if (snippetCount) {
+            snippetCount.textContent = `${snippets.length} ${snippets.length === 1 ? 'ENTRY' : 'ENTRIES'}`;
+        }
 
         const filteredSnippets = snippets.filter(s => 
             s.title.toLowerCase().includes(filter) || 
@@ -101,30 +131,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'snippet-card glass';
             
+            const originalIndex = snippets.indexOf(snippet);
+            const displayId = `DV-${String(snippets.length - originalIndex).padStart(3, '0')}`;
+            
             card.innerHTML = `
                 <div class="snippet-header">
-                    <div>
-                        <div class="snippet-title">${escapeHTML(snippet.title)}</div>
+                    <div class="snippet-meta">
+                        <span class="snippet-id">${displayId}</span>
                         <span class="snippet-lang">${snippet.language}</span>
                     </div>
-                    <div class="snippet-actions">
-                        <button class="icon-btn copy-btn" data-id="${snippet.id}" title="Copy Code">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                            </svg>
-                        </button>
-                        <button class="icon-btn delete-btn" data-id="${snippet.id}" title="Delete Snippet">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                        </button>
+                    <div class="snippet-title-row">
+                        <div class="snippet-title">${escapeHTML(snippet.title)}</div>
+                        <div class="snippet-actions">
+                            <button class="icon-btn copy-btn" data-id="${snippet.id}" title="Copy Code">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </button>
+                            <button class="icon-btn delete-btn" data-id="${snippet.id}" title="Delete Snippet">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="snippet-body">
+                    <div class="source-label">SOURCE</div>
                     <pre><code>${escapeHTML(snippet.code)}</code></pre>
                 </div>
             `;

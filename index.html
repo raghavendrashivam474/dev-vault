@@ -13,7 +13,10 @@
 <body>
     <div class="app-container">
         <header class="header glass">
-            <h1>Snippet Hub</h1>
+            <div>
+                <h1>◈ DevVault</h1>
+                <p class="subtitle">Your developer knowledge,<br>ready when you need it.</p>
+            </div>
             <div class="header-actions">
                 <input type="text" id="searchInput" placeholder="Search snippets..." class="search-input">
                 <button id="themeToggleBtn" class="icon-btn" title="Toggle Theme">
@@ -25,9 +28,21 @@
             </div>
         </header>
 
+        <div class="section-heading">
+            <span>YOUR VAULT</span>
+            <div class="vault-meta">
+                <span class="status-indicator"><span class="dot"></span> LOCAL</span>
+                <span class="snippet-count" id="snippetCount">0 ENTRIES</span>
+            </div>
+        </div>
         <main class="snippets-grid" id="snippetsContainer">
             <!-- Snippets will be injected here via JS -->
         </main>
+
+        <footer class="vault-footer">
+            <div class="footer-brand">◈ DevVault</div>
+            <div class="footer-tagline">Local-first developer knowledge · Offline ready</div>
+        </footer>
     </div>
 
     <!-- Modal for adding snippet -->

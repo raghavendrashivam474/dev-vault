@@ -18,13 +18,15 @@
 body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-color);
+    background-image: radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.03) 0%, transparent 60%);
+    background-attachment: fixed;
     color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
 }
 
 .app-container {
-    max-width: 1200px;
+    width: min(1400px, calc(100% - 48px));
     margin: 0 auto;
     padding: 2rem;
 }
@@ -45,6 +47,10 @@ body {
     align-items: center;
     padding: 1rem 2rem;
     margin-bottom: 2rem;
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 18px;
+    backdrop-filter: blur(12px);
+    background: rgba(22,23,28,.88);
 }
 
 .header h1 {
@@ -53,6 +59,13 @@ body {
     background: linear-gradient(to right, #6366f1, #a855f7);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    letter-spacing: -0.03em;
+}
+
+.subtitle {
+    margin: 4px 0 0;
+    color: #858894;
+    font-size: 13px;
 }
 
 .header-actions {
@@ -81,9 +94,17 @@ button {
     cursor: pointer;
     font-family: 'Inter', sans-serif;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: transform .15s ease, opacity .15s ease, background-color 0.2s ease, color 0.2s ease;
     border: none;
     outline: none;
+}
+
+button:hover {
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(0);
 }
 
 .primary-btn {
@@ -125,49 +146,142 @@ button {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 32px 0 16px;
+    color: #8b8f9e;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+.vault-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--success);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+.status-indicator .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--success);
+    box-shadow: 0 0 8px var(--success);
+}
+
+.snippet-count {
+    color: #585b6b;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+/* Footer Signature */
+.vault-footer {
+    margin-top: 64px;
+    padding-top: 32px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: center;
+    padding-bottom: 32px;
+}
+
+.footer-brand {
+    color: #8b8f9e;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.footer-tagline {
+    color: #585b6b;
+    font-size: 12px;
+}
+
 /* Snippets Grid */
 .snippets-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 24px;
 }
 
 /* Snippet Card */
 .snippet-card {
     display: flex;
     flex-direction: column;
+    border: 1px solid rgba(255,255,255,.05);
+    background: rgba(22, 23, 28, 0.4);
+    border-radius: 12px;
     overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    min-height: 420px;
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
 
 .snippet-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+    border-color: rgba(124, 92, 255, .25);
+    box-shadow: 0 8px 24px rgba(0,0,0,.3);
 }
 
 .snippet-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    border-bottom: 1px solid var(--card-border);
-    background: rgba(0, 0, 0, 0.2);
+    flex-direction: column;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    background: transparent;
+    gap: 8px;
 }
 
-.snippet-title {
-    font-size: 1rem;
+.snippet-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.snippet-id {
+    color: #585b6b;
+    font-family: "Cascadia Code", "JetBrains Mono", monospace;
+    font-size: 11px;
     font-weight: 600;
 }
 
+.snippet-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.snippet-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
 .snippet-lang {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    background: rgba(255, 255, 255, 0.05);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: 6px;
+    background: rgba(255,255,255,.06);
+    color: #a7a9b4;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .05em;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
 .snippet-actions {
@@ -176,21 +290,49 @@ button {
 }
 
 .snippet-body {
-    padding: 1rem;
     flex-grow: 1;
     position: relative;
-    background: #000;
+    background: #0a0b0e;
+    color: #c4c6d0;
+    padding: 36px 24px 24px;
+    line-height: 1.7;
+    font-size: 13px;
+    border-top: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.source-label {
+    position: absolute;
+    top: 12px;
+    left: 24px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #585b6b;
 }
 
 .snippet-body pre {
     margin: 0;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 0.85rem;
-    color: #e2e8f0;
+    font-family: "Cascadia Code", "JetBrains Mono", monospace;
     white-space: pre-wrap;
     word-break: break-all;
     max-height: 200px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,.15) transparent;
+}
+
+.snippet-body pre::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.snippet-body pre::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.snippet-body pre::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,.15);
+    border-radius: 999px;
 }
 
 /* Modal */
