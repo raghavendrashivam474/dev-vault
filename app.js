@@ -1,4 +1,7 @@
-document.addEventListener('DOMContentLoaded', () => {
+import { Vault } from './core/vault.js';
+import { IndexedDBRepository } from './storage/indexeddb.js';
+
+document.addEventListener('DOMContentLoaded', async () => {
     // DOM Elements
     const addBtn = document.getElementById('addBtn');
     const addModal = document.getElementById('addModal');
@@ -14,37 +17,34 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.setAttribute('data-theme', 'light');
     }
 
-    // State
-    let snippets = JSON.parse(localStorage.getItem('snippets'));
-    if (!snippets || snippets.length === 0) {
-        snippets = [
-            {
-                id: Date.now().toString() + '3',
-                title: 'Kill process on port',
-                language: 'bash',
-                code: '#!/bin/bash\nlsof -ti :3000 | xargs kill',
-                date: new Date().toISOString()
-            },
-            {
-                id: Date.now().toString() + '2',
-                title: 'Find large files',
-                language: 'bash',
-                code: 'find . -type f -size +100M -exec ls -lh {} \\;',
-                date: new Date().toISOString()
-            },
-            {
-                id: Date.now().toString() + '1',
-                title: 'Fetch JSON with async/await',
-                language: 'javascript',
-                code: 'async function getData(url) {\n    try {\n        const response = await fetch(url);\n        if (!response.ok) throw new Error(`Status: ${response.status}`);\n        return await response.json();\n    } catch (error) {\n        console.error("Fetch error:", error);\n    }\n}',
-                date: new Date().toISOString()
-            }
-        ];
-        localStorage.setItem('snippets', JSON.stringify(snippets));
+    // Initialize Vault
+    const repository = new IndexedDBRepository();
+    const vault = new Vault(repository);
+    await vault.init();
+
+    // Check if we need to add default snippets
+    let initialSnippets = await vault.listEntries();
+    if (initialSnippets.length === 0 && !localStorage.getItem('dev_vault_migration')) {
+        // If no snippets and no migration flag, it's a fresh install
+        await vault.createEntry({
+            title: 'Kill process on port',
+            language: 'bash',
+            content: '#!/bin/bash\nlsof -ti :3000 | xargs kill'
+        });
+        await vault.createEntry({
+            title: 'Find large files',
+            language: 'bash',
+            content: 'find . -type f -size +100M -exec ls -lh {} \\;'
+        });
+        await vault.createEntry({
+            title: 'Fetch JSON with async/await',
+            language: 'javascript',
+            content: 'async function getData(url) {\n    try {\n        const response = await fetch(url);\n        if (!response.ok) throw new Error(`Status: ${response.status}`);\n        return await response.json();\n    } catch (error) {\n        console.error("Fetch error:", error);\n    }\n}'
+        });
     }
 
-    // Initialize
-    renderSnippets();
+    // Initial render
+    await renderSnippets();
 
     // Event Listeners
     addBtn.addEventListener('click', () => {
@@ -63,30 +63,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    snippetForm.addEventListener('submit', (e) => {
+    snippetForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const title = document.getElementById('titleInput').value;
         const language = document.getElementById('languageInput').value;
-        const code = document.getElementById('codeInput').value;
+        const content = document.getElementById('codeInput').value;
 
-        const newSnippet = {
-            id: Date.now().toString(),
+        await vault.createEntry({
             title,
             language,
-            code,
-            date: new Date().toISOString()
-        };
+            content
+        });
 
-        snippets.unshift(newSnippet);
-        saveSnippets();
-        renderSnippets();
+        await renderSnippets();
         closeModal();
     });
 
-    searchInput.addEventListener('input', (e) => {
+    searchInput.addEventListener('input', async (e) => {
         const searchTerm = e.target.value.toLowerCase();
-        renderSnippets(searchTerm);
+        await renderSnippets(searchTerm);
     });
 
     themeToggleBtn.addEventListener('click', () => {
@@ -105,12 +101,10 @@ document.addEventListener('DOMContentLoaded', () => {
         snippetForm.reset();
     }
 
-    function saveSnippets() {
-        localStorage.setItem('snippets', JSON.stringify(snippets));
-    }
-
-    function renderSnippets(filter = '') {
+    async function renderSnippets(filter = '') {
         snippetsContainer.innerHTML = '';
+        
+        const snippets = await vault.listEntries();
         const snippetCount = document.getElementById('snippetCount');
         if (snippetCount) {
             snippetCount.textContent = `${snippets.length} ${snippets.length === 1 ? 'ENTRY' : 'ENTRIES'}`;
@@ -119,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const filteredSnippets = snippets.filter(s => 
             s.title.toLowerCase().includes(filter) || 
             s.language.toLowerCase().includes(filter) ||
-            s.code.toLowerCase().includes(filter)
+            s.content.toLowerCase().includes(filter)
         );
 
         if (filteredSnippets.length === 0) {
@@ -162,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="snippet-body">
                     <div class="source-label">SOURCE</div>
-                    <pre><code>${escapeHTML(snippet.code)}</code></pre>
+                    <pre><code>${escapeHTML(snippet.content)}</code></pre>
                 </div>
             `;
 
@@ -182,11 +176,12 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleCopy(e) {
         const btn = e.currentTarget;
         const id = btn.getAttribute('data-id');
+        const snippets = await vault.listEntries();
         const snippet = snippets.find(s => s.id === id);
         
         if (snippet) {
             try {
-                await navigator.clipboard.writeText(snippet.code);
+                await navigator.clipboard.writeText(snippet.content);
                 
                 // Visual feedback
                 const originalIcon = btn.innerHTML;
@@ -205,13 +200,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function handleDelete(e) {
+    async function handleDelete(e) {
         if (confirm('Are you sure you want to delete this snippet?')) {
             const btn = e.currentTarget;
             const id = btn.getAttribute('data-id');
-            snippets = snippets.filter(s => s.id !== id);
-            saveSnippets();
-            renderSnippets(searchInput.value.toLowerCase());
+            await vault.deleteEntry(id);
+            await renderSnippets(searchInput.value.toLowerCase());
         }
     }
 
