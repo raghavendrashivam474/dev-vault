@@ -1,4 +1,4 @@
-export function createEntry({ id, title, language, content, createdAt, updatedAt }) {
+export function createEntry({ id, title, language, content, createdAt, updatedAt, lastUsedAt, isFavorite }) {
     const now = new Date().toISOString();
     return {
         id: id || Date.now().toString(),
@@ -6,6 +6,8 @@ export function createEntry({ id, title, language, content, createdAt, updatedAt
         language: language || 'plaintext',
         content: content || '',
         createdAt: createdAt || now,
-        updatedAt: updatedAt || now
+        updatedAt: updatedAt || now,
+        lastUsedAt: lastUsedAt || null,
+        isFavorite: isFavorite || false
     };
 }

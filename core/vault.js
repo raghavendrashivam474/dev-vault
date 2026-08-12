@@ -29,6 +29,16 @@ export class Vault {
         return this.repository.remove(id);
     }
 
+    async markUsed(id) {
+        return this.repository.update(id, { lastUsedAt: new Date().toISOString() });
+    }
+
+    async toggleFavorite(id) {
+        const entry = await this.repository.get(id);
+        if (!entry) throw new Error('Entry not found');
+        return this.repository.update(id, { isFavorite: !entry.isFavorite });
+    }
+
     async migrateFromLocalStorage() {
         const migrationFlag = localStorage.getItem('dev_vault_migration');
         if (migrationFlag === 'v1') {

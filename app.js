@@ -9,7 +9,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const snippetForm = document.getElementById('snippetForm');
     const snippetsContainer = document.getElementById('snippetsContainer');
     const searchInput = document.getElementById('searchInput');
+    const filterSelect = document.getElementById('filterSelect');
     const themeToggleBtn = document.getElementById('themeToggleBtn');
+
+    // Navigation State
+    let selectedIndex = -1;
+    let currentRenderedSnippets = [];
 
     // Theme State
     const currentTheme = localStorage.getItem('theme') || 'dark';
@@ -82,8 +87,74 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     searchInput.addEventListener('input', async (e) => {
         const searchTerm = e.target.value.toLowerCase();
-        await renderSnippets(searchTerm);
+        await renderSnippets(searchTerm, filterSelect.value);
     });
+
+    filterSelect.addEventListener('change', async (e) => {
+        await renderSnippets(searchInput.value.toLowerCase(), e.target.value);
+    });
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+        const isEditable = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+
+        if (e.key === 'Escape') {
+            if (addModal.style.display === 'flex') {
+                closeModal();
+            } else if (document.activeElement === searchInput) {
+                searchInput.blur();
+                searchInput.value = '';
+                renderSnippets('', filterSelect.value);
+            } else {
+                selectedIndex = -1;
+                updateSelection();
+            }
+            return;
+        }
+
+        if (!isEditable) {
+            // Focus Search: / or Ctrl+K / Cmd+K
+            if (e.key === '/' || ((e.ctrlKey || e.metaKey) && e.key === 'k')) {
+                e.preventDefault();
+                searchInput.focus();
+                return;
+            }
+
+            // Navigation: Up/Down
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                if (currentRenderedSnippets.length === 0) return;
+                e.preventDefault();
+                
+                if (e.key === 'ArrowDown') {
+                    selectedIndex = (selectedIndex + 1) % currentRenderedSnippets.length;
+                } else {
+                    selectedIndex = selectedIndex - 1;
+                    if (selectedIndex < 0) selectedIndex = currentRenderedSnippets.length - 1;
+                }
+                updateSelection();
+                return;
+            }
+
+            // Enter: Copy selected
+            if (e.key === 'Enter' && selectedIndex >= 0 && selectedIndex < currentRenderedSnippets.length) {
+                e.preventDefault();
+                const snippetId = currentRenderedSnippets[selectedIndex].id;
+                const copyBtn = document.querySelector(`.copy-btn[data-id="${snippetId}"]`);
+                if (copyBtn) copyBtn.click();
+            }
+        }
+    });
+
+    function updateSelection() {
+        document.querySelectorAll('.snippet-card').forEach((card, idx) => {
+            if (idx === selectedIndex) {
+                card.classList.add('selected');
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+    }
 
     themeToggleBtn.addEventListener('click', () => {
         if (document.body.getAttribute('data-theme') === 'light') {
@@ -101,20 +172,52 @@ document.addEventListener('DOMContentLoaded', async () => {
         snippetForm.reset();
     }
 
-    async function renderSnippets(filter = '') {
+    async function renderSnippets(filter = '', filterMode = 'all') {
         snippetsContainer.innerHTML = '';
+        selectedIndex = -1;
         
-        const snippets = await vault.listEntries();
+        let snippets = await vault.listEntries();
+
+        // Apply Mode Filter
+        if (filterMode === 'favorites') {
+            snippets = snippets.filter(s => s.isFavorite);
+        } else if (filterMode === 'recent') {
+            snippets = snippets.filter(s => s.lastUsedAt);
+            snippets.sort((a, b) => new Date(b.lastUsedAt) - new Date(a.lastUsedAt));
+        }
+
         const snippetCount = document.getElementById('snippetCount');
         if (snippetCount) {
             snippetCount.textContent = `${snippets.length} ${snippets.length === 1 ? 'ENTRY' : 'ENTRIES'}`;
         }
 
-        const filteredSnippets = snippets.filter(s => 
-            s.title.toLowerCase().includes(filter) || 
-            s.language.toLowerCase().includes(filter) ||
-            s.content.toLowerCase().includes(filter)
-        );
+        // Apply Search and Ranking
+        let filteredSnippets = [];
+        if (!filter) {
+            filteredSnippets = snippets;
+        } else {
+            const scoredSnippets = snippets.map(s => {
+                let score = 0;
+                const titleLower = s.title.toLowerCase();
+                const langLower = s.language.toLowerCase();
+                const contentLower = s.content.toLowerCase();
+                
+                if (titleLower === filter) score += 100;
+                else if (titleLower.includes(filter)) score += 50;
+                
+                if (langLower === filter) score += 30;
+                else if (langLower.includes(filter)) score += 15;
+                
+                if (contentLower.includes(filter)) score += 5;
+                
+                return { snippet: s, score };
+            }).filter(item => item.score > 0);
+            
+            scoredSnippets.sort((a, b) => b.score - a.score);
+            filteredSnippets = scoredSnippets.map(item => item.snippet);
+        }
+
+        currentRenderedSnippets = filteredSnippets;
 
         if (filteredSnippets.length === 0) {
             snippetsContainer.innerHTML = '<p style="color: var(--text-secondary); text-align: center; grid-column: 1 / -1;">No snippets found. Add one!</p>';
@@ -124,10 +227,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         filteredSnippets.forEach(snippet => {
             const card = document.createElement('div');
             card.className = 'snippet-card glass';
+            card.setAttribute('data-id', snippet.id);
             
             const originalIndex = snippets.indexOf(snippet);
             const displayId = `DV-${String(snippets.length - originalIndex).padStart(3, '0')}`;
             
+            const favIcon = snippet.isFavorite 
+                ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #f59e0b;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`
+                : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+
             card.innerHTML = `
                 <div class="snippet-header">
                     <div class="snippet-meta">
@@ -137,6 +245,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="snippet-title-row">
                         <div class="snippet-title">${escapeHTML(snippet.title)}</div>
                         <div class="snippet-actions">
+                            <button class="icon-btn fav-btn" data-id="${snippet.id}" title="Toggle Favorite">
+                                ${favIcon}
+                            </button>
                             <button class="icon-btn copy-btn" data-id="${snippet.id}" title="Copy Code">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -171,6 +282,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', handleDelete);
         });
+        
+        document.querySelectorAll('.fav-btn').forEach(btn => {
+            btn.addEventListener('click', handleFavorite);
+        });
     }
 
     async function handleCopy(e) {
@@ -182,6 +297,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (snippet) {
             try {
                 await navigator.clipboard.writeText(snippet.content);
+                await vault.markUsed(id); // Mark as used when copied
                 
                 // Visual feedback
                 const originalIcon = btn.innerHTML;
@@ -200,12 +316,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    async function handleFavorite(e) {
+        const btn = e.currentTarget;
+        const id = btn.getAttribute('data-id');
+        await vault.toggleFavorite(id);
+        await renderSnippets(searchInput.value.toLowerCase(), filterSelect.value);
+    }
+
     async function handleDelete(e) {
         if (confirm('Are you sure you want to delete this snippet?')) {
             const btn = e.currentTarget;
             const id = btn.getAttribute('data-id');
             await vault.deleteEntry(id);
-            await renderSnippets(searchInput.value.toLowerCase());
+            await renderSnippets(searchInput.value.toLowerCase(), filterSelect.value);
         }
     }
 

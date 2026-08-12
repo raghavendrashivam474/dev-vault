@@ -462,3 +462,10 @@ button:active {
 [data-theme="light"] .form-group textarea {
     background: rgba(255, 255, 255, 0.8);
 }
+
+/* Keyboard Navigation */
+.snippet-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
+    transform: translateY(-2px);
+}
