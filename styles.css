@@ -271,6 +271,30 @@ button:active {
     color: var(--text-primary);
 }
 
+.snippet-description {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+.snippet-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.snippet-tag {
+    font-family: "Cascadia Code", "JetBrains Mono", monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    background: rgba(99, 102, 241, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
 .snippet-lang {
     display: inline-flex;
     align-items: center;

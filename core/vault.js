@@ -1,4 +1,4 @@
-import { createEntry } from './models.js';
+import { createEntry, normalizeEntry } from './models.js';
 
 export class Vault {
     constructor(repository) {
@@ -13,7 +13,8 @@ export class Vault {
     }
 
     async listEntries() {
-        return this.repository.list();
+        const entries = await this.repository.list();
+        return entries.map(normalizeEntry);
     }
 
     async createEntry(data) {

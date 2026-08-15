@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const snippetsContainer = document.getElementById('snippetsContainer');
     const searchInput = document.getElementById('searchInput');
     const filterSelect = document.getElementById('filterSelect');
+    const typeFilter = document.getElementById('typeFilter');
     const themeToggleBtn = document.getElementById('themeToggleBtn');
 
     // Navigation State
@@ -72,26 +73,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         
         const title = document.getElementById('titleInput').value;
+        const type = document.getElementById('typeInput').value;
         const language = document.getElementById('languageInput').value;
+        const description = document.getElementById('descriptionInput').value;
+        const tagsRaw = document.getElementById('tagsInput').value;
         const content = document.getElementById('codeInput').value;
+
+        const tags = tagsRaw.split(/[, ]+/).map(t => t.trim().toLowerCase()).filter(t => t);
 
         await vault.createEntry({
             title,
+            type,
             language,
+            description,
+            tags,
             content
         });
 
-        await renderSnippets();
+        await renderSnippets(searchInput.value.toLowerCase(), filterSelect.value, typeFilter.value);
         closeModal();
     });
 
     searchInput.addEventListener('input', async (e) => {
         const searchTerm = e.target.value.toLowerCase();
-        await renderSnippets(searchTerm, filterSelect.value);
+        await renderSnippets(searchTerm, filterSelect.value, typeFilter.value);
     });
 
     filterSelect.addEventListener('change', async (e) => {
-        await renderSnippets(searchInput.value.toLowerCase(), e.target.value);
+        await renderSnippets(searchInput.value.toLowerCase(), e.target.value, typeFilter.value);
+    });
+
+    typeFilter.addEventListener('change', async (e) => {
+        await renderSnippets(searchInput.value.toLowerCase(), filterSelect.value, e.target.value);
     });
 
     // Keyboard Shortcuts
@@ -104,7 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else if (document.activeElement === searchInput) {
                 searchInput.blur();
                 searchInput.value = '';
-                renderSnippets('', filterSelect.value);
+                renderSnippets('', filterSelect.value, typeFilter.value);
             } else {
                 selectedIndex = -1;
                 updateSelection();
@@ -172,7 +185,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         snippetForm.reset();
     }
 
-    async function renderSnippets(filter = '', filterMode = 'all') {
+    async function renderSnippets(filter = '', filterMode = 'all', currentTypeFilter = 'all') {
         snippetsContainer.innerHTML = '';
         selectedIndex = -1;
         
@@ -184,6 +197,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (filterMode === 'recent') {
             snippets = snippets.filter(s => s.lastUsedAt);
             snippets.sort((a, b) => new Date(b.lastUsedAt) - new Date(a.lastUsedAt));
+        }
+
+        if (currentTypeFilter !== 'all') {
+            snippets = snippets.filter(s => s.type === currentTypeFilter);
         }
 
         const snippetCount = document.getElementById('snippetCount');
@@ -201,12 +218,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const titleLower = s.title.toLowerCase();
                 const langLower = s.language.toLowerCase();
                 const contentLower = s.content.toLowerCase();
+                const typeLower = s.type.toLowerCase();
+                const descLower = s.description.toLowerCase();
+                const tagsLower = s.tags.map(t => t.toLowerCase());
                 
                 if (titleLower === filter) score += 100;
                 else if (titleLower.includes(filter)) score += 50;
+
+                if (tagsLower.includes(filter)) score += 80;
+                else if (tagsLower.some(t => t.includes(filter))) score += 40;
+
+                if (typeLower === filter) score += 30;
                 
                 if (langLower === filter) score += 30;
                 else if (langLower.includes(filter)) score += 15;
+
+                if (descLower.includes(filter)) score += 20;
                 
                 if (contentLower.includes(filter)) score += 5;
                 
@@ -236,11 +263,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #f59e0b;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`
                 : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
 
+            const descHtml = snippet.description ? `<div class="snippet-description">${escapeHTML(snippet.description)}</div>` : '';
+            const tagsHtml = snippet.tags && snippet.tags.length > 0 ? `<div class="snippet-tags">${snippet.tags.map(t => `<span class="snippet-tag">[${escapeHTML(t)}]</span>`).join(' ')}</div>` : '';
+            const typeStr = snippet.type.charAt(0).toUpperCase() + snippet.type.slice(1);
+
             card.innerHTML = `
                 <div class="snippet-header">
                     <div class="snippet-meta">
                         <span class="snippet-id">${displayId}</span>
-                        <span class="snippet-lang">${snippet.language}</span>
+                        <span class="snippet-lang">${typeStr} &middot; ${snippet.language}</span>
                     </div>
                     <div class="snippet-title-row">
                         <div class="snippet-title">${escapeHTML(snippet.title)}</div>
@@ -264,6 +295,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </button>
                         </div>
                     </div>
+                    ${descHtml}
+                    ${tagsHtml}
                 </div>
                 <div class="snippet-body">
                     <div class="source-label">SOURCE</div>
@@ -320,7 +353,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const btn = e.currentTarget;
         const id = btn.getAttribute('data-id');
         await vault.toggleFavorite(id);
-        await renderSnippets(searchInput.value.toLowerCase(), filterSelect.value);
+        await renderSnippets(searchInput.value.toLowerCase(), filterSelect.value, typeFilter.value);
     }
 
     async function handleDelete(e) {
@@ -328,7 +361,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const btn = e.currentTarget;
             const id = btn.getAttribute('data-id');
             await vault.deleteEntry(id);
-            await renderSnippets(searchInput.value.toLowerCase(), filterSelect.value);
+            await renderSnippets(searchInput.value.toLowerCase(), filterSelect.value, typeFilter.value);
         }
     }
 

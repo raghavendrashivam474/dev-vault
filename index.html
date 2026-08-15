@@ -18,6 +18,16 @@
                 <p class="subtitle">Your developer knowledge,<br>ready when you need it.</p>
             </div>
             <div class="header-actions">
+                <select id="typeFilter" class="search-input" style="width: auto; padding-right: 24px; cursor: pointer; margin-right: 8px;">
+                    <option value="all">All Types</option>
+                    <option value="snippet">Snippet</option>
+                    <option value="command">Command</option>
+                    <option value="query">Query</option>
+                    <option value="regex">Regex</option>
+                    <option value="config">Config</option>
+                    <option value="reference">Reference</option>
+                    <option value="solution">Solution</option>
+                </select>
                 <select id="filterSelect" class="search-input" style="width: auto; padding-right: 24px; cursor: pointer;">
                     <option value="all">All</option>
                     <option value="favorites">Favorites</option>
@@ -60,6 +70,18 @@
                     <input type="text" id="titleInput" required placeholder="e.g. Fetch API Boilerplate">
                 </div>
                 <div class="form-group">
+                    <label for="typeInput">Type</label>
+                    <select id="typeInput">
+                        <option value="snippet">Snippet</option>
+                        <option value="command">Command</option>
+                        <option value="query">Query</option>
+                        <option value="regex">Regex</option>
+                        <option value="config">Config</option>
+                        <option value="reference">Reference</option>
+                        <option value="solution">Solution</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="languageInput">Language</label>
                     <select id="languageInput">
                         <option value="javascript">JavaScript</option>
@@ -69,6 +91,14 @@
                         <option value="bash">Bash</option>
                         <option value="plaintext">Plain Text</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label for="descriptionInput">Description</label>
+                    <input type="text" id="descriptionInput" placeholder="Brief description (optional)">
+                </div>
+                <div class="form-group">
+                    <label for="tagsInput">Tags</label>
+                    <input type="text" id="tagsInput" placeholder="e.g. docker, api (optional)">
                 </div>
                 <div class="form-group">
                     <label for="codeInput">Code</label>
