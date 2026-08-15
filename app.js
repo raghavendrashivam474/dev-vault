@@ -9,13 +9,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     const snippetForm = document.getElementById('snippetForm');
     const snippetsContainer = document.getElementById('snippetsContainer');
     const searchInput = document.getElementById('searchInput');
-    const filterSelect = document.getElementById('filterSelect');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
     const typeFilter = document.getElementById('typeFilter');
+    const langFilter = document.getElementById('langFilter');
+    const filterSelect = document.getElementById('filterSelect');
+    const sortSelect = document.getElementById('sortSelect');
+    const activeFiltersContainer = document.getElementById('activeFiltersContainer');
+    const activeFiltersChips = document.getElementById('activeFiltersChips');
+    const clearAllFiltersBtn = document.getElementById('clearAllFiltersBtn');
     const themeToggleBtn = document.getElementById('themeToggleBtn');
 
     // Navigation State
     let selectedIndex = -1;
     let currentRenderedSnippets = [];
+
+    // Discovery State
+    const discoveryState = {
+        query: '',
+        type: 'all',
+        language: 'all',
+        status: 'all',
+        tag: null,
+        sort: 'recently_added'
+    };
 
     // Theme State
     const currentTheme = localStorage.getItem('theme') || 'dark';
@@ -34,17 +50,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         // If no snippets and no migration flag, it's a fresh install
         await vault.createEntry({
             title: 'Kill process on port',
+            type: 'command',
             language: 'bash',
+            description: 'Kill any process running on port 3000',
+            tags: ['bash', 'port', 'kill'],
             content: '#!/bin/bash\nlsof -ti :3000 | xargs kill'
         });
         await vault.createEntry({
             title: 'Find large files',
+            type: 'command',
             language: 'bash',
+            description: 'Find files larger than 100MB in the current directory',
+            tags: ['bash', 'files', 'find'],
             content: 'find . -type f -size +100M -exec ls -lh {} \\;'
         });
         await vault.createEntry({
             title: 'Fetch JSON with async/await',
+            type: 'snippet',
             language: 'javascript',
+            description: 'Boilerplate for fetching data asynchronously using fetch API',
+            tags: ['js', 'fetch', 'async'],
             content: 'async function getData(url) {\n    try {\n        const response = await fetch(url);\n        if (!response.ok) throw new Error(`Status: ${response.status}`);\n        return await response.json();\n    } catch (error) {\n        console.error("Fetch error:", error);\n    }\n}'
         });
     }
@@ -90,22 +115,43 @@ document.addEventListener('DOMContentLoaded', async () => {
             content
         });
 
-        await renderSnippets(searchInput.value.toLowerCase(), filterSelect.value, typeFilter.value);
+        await renderSnippets();
         closeModal();
     });
 
     searchInput.addEventListener('input', async (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        await renderSnippets(searchTerm, filterSelect.value, typeFilter.value);
+        discoveryState.query = e.target.value.toLowerCase();
+        await renderSnippets();
     });
 
-    filterSelect.addEventListener('change', async (e) => {
-        await renderSnippets(searchInput.value.toLowerCase(), e.target.value, typeFilter.value);
+    clearSearchBtn.addEventListener('click', () => {
+        discoveryState.query = '';
+        searchInput.value = '';
+        renderSnippets();
+        searchInput.focus();
     });
 
     typeFilter.addEventListener('change', async (e) => {
-        await renderSnippets(searchInput.value.toLowerCase(), filterSelect.value, e.target.value);
+        discoveryState.type = e.target.value;
+        await renderSnippets();
     });
+
+    langFilter.addEventListener('change', async (e) => {
+        discoveryState.language = e.target.value;
+        await renderSnippets();
+    });
+
+    filterSelect.addEventListener('change', async (e) => {
+        discoveryState.status = e.target.value;
+        await renderSnippets();
+    });
+
+    sortSelect.addEventListener('change', async (e) => {
+        discoveryState.sort = e.target.value;
+        await renderSnippets();
+    });
+
+    clearAllFiltersBtn.addEventListener('click', clearAllFilters);
 
     // Keyboard Shortcuts
     document.addEventListener('keydown', (e) => {
@@ -117,7 +163,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else if (document.activeElement === searchInput) {
                 searchInput.blur();
                 searchInput.value = '';
-                renderSnippets('', filterSelect.value, typeFilter.value);
+                discoveryState.query = '';
+                renderSnippets();
             } else {
                 selectedIndex = -1;
                 updateSelection();
@@ -185,86 +232,62 @@ document.addEventListener('DOMContentLoaded', async () => {
         snippetForm.reset();
     }
 
-    async function renderSnippets(filter = '', filterMode = 'all', currentTypeFilter = 'all') {
+    async function renderSnippets() {
         snippetsContainer.innerHTML = '';
         selectedIndex = -1;
         
-        let snippets = await vault.listEntries();
+        // Fetch snippets matching discovery state
+        const snippets = await vault.listEntries({
+            query: discoveryState.query,
+            type: discoveryState.type,
+            language: discoveryState.language,
+            status: discoveryState.status,
+            tag: discoveryState.tag,
+            sort: discoveryState.sort
+        });
 
-        // Apply Mode Filter
-        if (filterMode === 'favorites') {
-            snippets = snippets.filter(s => s.isFavorite);
-        } else if (filterMode === 'recent') {
-            snippets = snippets.filter(s => s.lastUsedAt);
-            snippets.sort((a, b) => new Date(b.lastUsedAt) - new Date(a.lastUsedAt));
-        }
-
-        if (currentTypeFilter !== 'all') {
-            snippets = snippets.filter(s => s.type === currentTypeFilter);
-        }
+        // Total count of entries in the vault (unfiltered)
+        const allSnippets = await vault.listEntries();
 
         const snippetCount = document.getElementById('snippetCount');
         if (snippetCount) {
             snippetCount.textContent = `${snippets.length} ${snippets.length === 1 ? 'ENTRY' : 'ENTRIES'}`;
         }
 
-        // Apply Search and Ranking
-        let filteredSnippets = [];
-        if (!filter) {
-            filteredSnippets = snippets;
+        // Render clear search button visibility
+        if (discoveryState.query) {
+            clearSearchBtn.style.display = 'flex';
         } else {
-            const scoredSnippets = snippets.map(s => {
-                let score = 0;
-                const titleLower = s.title.toLowerCase();
-                const langLower = s.language.toLowerCase();
-                const contentLower = s.content.toLowerCase();
-                const typeLower = s.type.toLowerCase();
-                const descLower = s.description.toLowerCase();
-                const tagsLower = s.tags.map(t => t.toLowerCase());
-                
-                if (titleLower === filter) score += 100;
-                else if (titleLower.includes(filter)) score += 50;
-
-                if (tagsLower.includes(filter)) score += 80;
-                else if (tagsLower.some(t => t.includes(filter))) score += 40;
-
-                if (typeLower === filter) score += 30;
-                
-                if (langLower === filter) score += 30;
-                else if (langLower.includes(filter)) score += 15;
-
-                if (descLower.includes(filter)) score += 20;
-                
-                if (contentLower.includes(filter)) score += 5;
-                
-                return { snippet: s, score };
-            }).filter(item => item.score > 0);
-            
-            scoredSnippets.sort((a, b) => b.score - a.score);
-            filteredSnippets = scoredSnippets.map(item => item.snippet);
+            clearSearchBtn.style.display = 'none';
         }
 
-        currentRenderedSnippets = filteredSnippets;
+        // Render active filter chips
+        renderActiveFilters();
 
-        if (filteredSnippets.length === 0) {
-            snippetsContainer.innerHTML = '<p style="color: var(--text-secondary); text-align: center; grid-column: 1 / -1;">No snippets found. Add one!</p>';
+        if (snippets.length === 0) {
+            renderEmptyState(allSnippets.length === 0);
+            currentRenderedSnippets = [];
             return;
         }
 
-        filteredSnippets.forEach(snippet => {
+        currentRenderedSnippets = snippets;
+
+        snippets.forEach(snippet => {
             const card = document.createElement('div');
             card.className = 'snippet-card glass';
             card.setAttribute('data-id', snippet.id);
             
-            const originalIndex = snippets.indexOf(snippet);
-            const displayId = `DV-${String(snippets.length - originalIndex).padStart(3, '0')}`;
+            const originalIndex = allSnippets.findIndex(s => s.id === snippet.id);
+            const displayId = `DV-${String(allSnippets.length - originalIndex).padStart(3, '0')}`;
             
             const favIcon = snippet.isFavorite 
                 ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #f59e0b;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`
                 : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
 
             const descHtml = snippet.description ? `<div class="snippet-description">${escapeHTML(snippet.description)}</div>` : '';
-            const tagsHtml = snippet.tags && snippet.tags.length > 0 ? `<div class="snippet-tags">${snippet.tags.map(t => `<span class="snippet-tag">[${escapeHTML(t)}]</span>`).join(' ')}</div>` : '';
+            const tagsHtml = snippet.tags && snippet.tags.length > 0 
+                ? `<div class="snippet-tags">${snippet.tags.map(t => `<span class="snippet-tag" data-tag="${escapeHTML(t)}">[${escapeHTML(t)}]</span>`).join(' ')}</div>` 
+                : '';
             const typeStr = snippet.type.charAt(0).toUpperCase() + snippet.type.slice(1);
 
             card.innerHTML = `
@@ -319,6 +342,135 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.fav-btn').forEach(btn => {
             btn.addEventListener('click', handleFavorite);
         });
+
+        document.querySelectorAll('.snippet-tag').forEach(tagEl => {
+            tagEl.addEventListener('click', handleTagClick);
+        });
+    }
+
+    function renderActiveFilters() {
+        activeFiltersChips.innerHTML = '';
+        let hasActiveFilters = false;
+
+        if (discoveryState.query) {
+            createFilterChip('Search', `"${discoveryState.query}"`, () => {
+                discoveryState.query = '';
+                searchInput.value = '';
+                renderSnippets();
+            });
+            hasActiveFilters = true;
+        }
+
+        if (discoveryState.type !== 'all') {
+            const displayType = typeFilter.options[typeFilter.selectedIndex]?.text || discoveryState.type;
+            createFilterChip('Type', displayType, () => {
+                discoveryState.type = 'all';
+                typeFilter.value = 'all';
+                renderSnippets();
+            });
+            hasActiveFilters = true;
+        }
+
+        if (discoveryState.language !== 'all') {
+            const displayLang = langFilter.options[langFilter.selectedIndex]?.text || discoveryState.language;
+            createFilterChip('Lang', displayLang, () => {
+                discoveryState.language = 'all';
+                langFilter.value = 'all';
+                renderSnippets();
+            });
+            hasActiveFilters = true;
+        }
+
+        if (discoveryState.status !== 'all') {
+            const displayStatus = filterSelect.options[filterSelect.selectedIndex]?.text || discoveryState.status;
+            createFilterChip('Status', displayStatus, () => {
+                discoveryState.status = 'all';
+                filterSelect.value = 'all';
+                renderSnippets();
+            });
+            hasActiveFilters = true;
+        }
+
+        if (discoveryState.tag) {
+            createFilterChip('Tag', discoveryState.tag, () => {
+                discoveryState.tag = null;
+                renderSnippets();
+            });
+            hasActiveFilters = true;
+        }
+
+        if (hasActiveFilters) {
+            activeFiltersContainer.style.display = 'flex';
+        } else {
+            activeFiltersContainer.style.display = 'none';
+        }
+    }
+
+    function createFilterChip(label, value, onRemove) {
+        const chip = document.createElement('div');
+        chip.className = 'filter-chip';
+        chip.innerHTML = `
+            <span>${label}: ${value}</span>
+            <button class="filter-chip-remove">&times;</button>
+        `;
+        chip.querySelector('.filter-chip-remove').addEventListener('click', onRemove);
+        activeFiltersChips.appendChild(chip);
+    }
+
+    function renderEmptyState(isVaultEmpty) {
+        if (isVaultEmpty) {
+            snippetsContainer.innerHTML = `
+                <div class="empty-state">
+                    <h3>Your vault is empty.</h3>
+                    <p>Save your first piece of developer knowledge.</p>
+                    <button class="primary-btn" id="emptyStateAddBtn">+ Add Snippet</button>
+                </div>
+            `;
+            document.getElementById('emptyStateAddBtn').addEventListener('click', () => {
+                addModal.style.display = 'flex';
+                document.getElementById('titleInput').focus();
+            });
+        } else {
+            snippetsContainer.innerHTML = `
+                <div class="empty-state">
+                    <h3>No entries found</h3>
+                    <p>Nothing matches your search or filters.</p>
+                    <ul>
+                        <li>Try another search term</li>
+                        <li>Remove one or more active filters</li>
+                        <li>Reset all filters to start fresh</li>
+                    </ul>
+                    <button class="secondary-btn" id="emptyStateClearBtn" style="border: 1px solid var(--card-border);">Clear all filters</button>
+                </div>
+            `;
+            document.getElementById('emptyStateClearBtn').addEventListener('click', clearAllFilters);
+        }
+    }
+
+    function clearAllFilters() {
+        discoveryState.query = '';
+        discoveryState.type = 'all';
+        discoveryState.language = 'all';
+        discoveryState.status = 'all';
+        discoveryState.tag = null;
+        discoveryState.sort = 'recently_added';
+
+        searchInput.value = '';
+        typeFilter.value = 'all';
+        langFilter.value = 'all';
+        filterSelect.value = 'all';
+        sortSelect.value = 'recently_added';
+
+        renderSnippets();
+        searchInput.focus();
+    }
+
+    function handleTagClick(e) {
+        const tag = e.currentTarget.getAttribute('data-tag');
+        if (tag) {
+            discoveryState.tag = tag;
+            renderSnippets();
+        }
     }
 
     async function handleCopy(e) {
@@ -353,7 +505,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const btn = e.currentTarget;
         const id = btn.getAttribute('data-id');
         await vault.toggleFavorite(id);
-        await renderSnippets(searchInput.value.toLowerCase(), filterSelect.value, typeFilter.value);
+        await renderSnippets();
     }
 
     async function handleDelete(e) {
@@ -361,7 +513,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const btn = e.currentTarget;
             const id = btn.getAttribute('data-id');
             await vault.deleteEntry(id);
-            await renderSnippets(searchInput.value.toLowerCase(), filterSelect.value, typeFilter.value);
+            await renderSnippets();
         }
     }
 

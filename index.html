@@ -13,33 +13,59 @@
 <body>
     <div class="app-container">
         <header class="header glass">
-            <div>
-                <h1>◈ DevVault</h1>
-                <p class="subtitle">Your developer knowledge,<br>ready when you need it.</p>
+            <div class="header-main">
+                <div>
+                    <h1>◈ DevVault</h1>
+                    <p class="subtitle">Your developer knowledge,<br>ready when you need it.</p>
+                </div>
+                <div class="header-main-actions">
+                    <button id="themeToggleBtn" class="icon-btn" title="Toggle Theme">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </button>
+                    <button id="addBtn" class="primary-btn">+ Add Snippet</button>
+                </div>
             </div>
-            <div class="header-actions">
-                <select id="typeFilter" class="search-input" style="width: auto; padding-right: 24px; cursor: pointer; margin-right: 8px;">
-                    <option value="all">All Types</option>
-                    <option value="snippet">Snippet</option>
-                    <option value="command">Command</option>
-                    <option value="query">Query</option>
-                    <option value="regex">Regex</option>
-                    <option value="config">Config</option>
-                    <option value="reference">Reference</option>
-                    <option value="solution">Solution</option>
-                </select>
-                <select id="filterSelect" class="search-input" style="width: auto; padding-right: 24px; cursor: pointer;">
-                    <option value="all">All</option>
-                    <option value="favorites">Favorites</option>
-                    <option value="recent">Recent</option>
-                </select>
-                <input type="text" id="searchInput" placeholder="Search snippets..." class="search-input">
-                <button id="themeToggleBtn" class="icon-btn" title="Toggle Theme">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                    </svg>
-                </button>
-                <button id="addBtn" class="primary-btn">+ Add Snippet</button>
+            <div class="header-divider"></div>
+            <div class="filter-bar">
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search snippets..." class="search-input">
+                    <button id="clearSearchBtn" class="clear-search-btn" title="Clear Search" style="display: none;">&times;</button>
+                </div>
+                <div class="select-group">
+                    <select id="typeFilter" class="search-input select-filter">
+                        <option value="all">All Types</option>
+                        <option value="snippet">Snippet</option>
+                        <option value="command">Command</option>
+                        <option value="query">Query</option>
+                        <option value="regex">Regex</option>
+                        <option value="config">Config</option>
+                        <option value="reference">Reference</option>
+                        <option value="solution">Solution</option>
+                    </select>
+                    <select id="langFilter" class="search-input select-filter">
+                        <option value="all">All Languages</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="html">HTML</option>
+                        <option value="css">CSS</option>
+                        <option value="python">Python</option>
+                        <option value="bash">Bash</option>
+                        <option value="plaintext">Plain Text</option>
+                    </select>
+                    <select id="filterSelect" class="search-input select-filter">
+                        <option value="all">All Status</option>
+                        <option value="favorites">Favorites</option>
+                        <option value="recent">Recent</option>
+                    </select>
+                    <select id="sortSelect" class="search-input select-filter">
+                        <option value="recently_added">Recently Added</option>
+                        <option value="recently_updated">Recently Updated</option>
+                        <option value="recently_used">Recently Used</option>
+                        <option value="title_asc">Title A → Z</option>
+                        <option value="title_desc">Title Z → A</option>
+                    </select>
+                </div>
             </div>
         </header>
 
@@ -49,6 +75,12 @@
                 <span class="status-indicator"><span class="dot"></span> LOCAL</span>
                 <span class="snippet-count" id="snippetCount">0 ENTRIES</span>
             </div>
+        </div>
+
+        <div id="activeFiltersContainer" class="active-filters-bar" style="display: none;">
+            <span class="active-filters-label">Active:</span>
+            <div id="activeFiltersChips" class="active-filters-chips"></div>
+            <button id="clearAllFiltersBtn" class="clear-filters-btn">Clear filters</button>
         </div>
         <main class="snippets-grid" id="snippetsContainer">
             <!-- Snippets will be injected here via JS -->

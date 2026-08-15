@@ -12,9 +12,88 @@ export class Vault {
         await this.migrateFromLocalStorage();
     }
 
-    async listEntries() {
-        const entries = await this.repository.list();
-        return entries.map(normalizeEntry);
+    async listEntries(options = {}) {
+        let entries = await this.repository.list();
+        entries = entries.map(normalizeEntry);
+
+        const { query, type, language, status, tag, sort } = options;
+
+        // 1. Status filter (favorites/recent)
+        if (status === 'favorites') {
+            entries = entries.filter(e => e.isFavorite);
+        } else if (status === 'recent') {
+            entries = entries.filter(e => e.lastUsedAt);
+        }
+
+        // 2. Type filter
+        if (type && type !== 'all') {
+            entries = entries.filter(e => e.type === type);
+        }
+
+        // 3. Language filter
+        if (language && language !== 'all') {
+            entries = entries.filter(e => e.language === language);
+        }
+
+        // 4. Tag filter
+        if (tag) {
+            const normalizedTag = tag.trim().toLowerCase();
+            entries = entries.filter(e => e.tags.some(t => t.toLowerCase() === normalizedTag));
+        }
+
+        // 5. Search rank scoring and sort
+        if (query && query.trim() !== '') {
+            const filter = query.trim().toLowerCase();
+            const scored = entries.map(s => {
+                let score = 0;
+                const titleLower = (s.title || '').toLowerCase();
+                const langLower = (s.language || '').toLowerCase();
+                const contentLower = (s.content || '').toLowerCase();
+                const typeLower = (s.type || '').toLowerCase();
+                const descLower = (s.description || '').toLowerCase();
+                const tagsLower = (s.tags || []).map(t => t.toLowerCase());
+
+                if (titleLower === filter) score += 100;
+                else if (titleLower.includes(filter)) score += 50;
+
+                if (tagsLower.includes(filter)) score += 80;
+                else if (tagsLower.some(t => t.includes(filter))) score += 40;
+
+                if (typeLower === filter) score += 30;
+
+                if (langLower === filter) score += 30;
+                else if (langLower.includes(filter)) score += 15;
+
+                if (descLower.includes(filter)) score += 20;
+
+                if (contentLower.includes(filter)) score += 5;
+
+                return { entry: s, score };
+            }).filter(item => item.score > 0);
+
+            scored.sort((a, b) => b.score - a.score);
+            entries = scored.map(item => item.entry);
+        } else {
+            // Apply sorting
+            const sortMode = sort || (status === 'recent' ? 'recently_used' : 'recently_added');
+            if (sortMode === 'recently_added') {
+                entries.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            } else if (sortMode === 'recently_updated') {
+                entries.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+            } else if (sortMode === 'recently_used') {
+                entries.sort((a, b) => {
+                    const dateA = a.lastUsedAt ? new Date(a.lastUsedAt) : new Date(0);
+                    const dateB = b.lastUsedAt ? new Date(b.lastUsedAt) : new Date(0);
+                    return dateB - dateA;
+                });
+            } else if (sortMode === 'title_asc') {
+                entries.sort((a, b) => a.title.localeCompare(b.title));
+            } else if (sortMode === 'title_desc') {
+                entries.sort((a, b) => b.title.localeCompare(a.title));
+            }
+        }
+
+        return entries;
     }
 
     async createEntry(data) {
