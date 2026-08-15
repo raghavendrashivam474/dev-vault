@@ -654,7 +654,7 @@ button:active {
         text-align: center;
     }
     
-    .header-actions {
+    .header-main-actions {
         flex-direction: column;
     }
     

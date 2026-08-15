@@ -5,7 +5,11 @@ const urlsToCache = [
   '/styles.css',
   '/app.js',
   '/manifest.json',
-  '/core/serialization.js'
+  '/core/serialization.js',
+  '/core/vault.js',
+  '/core/models.js',
+  '/storage/indexeddb.js',
+  '/storage/repository.js'
 ];
 
 self.addEventListener('install', event => {
