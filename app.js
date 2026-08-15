@@ -18,6 +18,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const activeFiltersChips = document.getElementById('activeFiltersChips');
     const clearAllFiltersBtn = document.getElementById('clearAllFiltersBtn');
     const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const vaultMenuBtn = document.getElementById('vaultMenuBtn');
+    const vaultDropdown = document.getElementById('vaultDropdown');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const importFileInput = document.getElementById('importFileInput');
+    const alertModal = document.getElementById('alertModal');
+    const alertTitle = document.getElementById('alertTitle');
+    const alertMessage = document.getElementById('alertMessage');
+    const alertIcon = document.getElementById('alertIcon');
+    const alertOkBtn = document.getElementById('alertOkBtn');
 
     // Navigation State
     let selectedIndex = -1;
@@ -225,6 +235,96 @@ document.addEventListener('DOMContentLoaded', async () => {
             localStorage.setItem('theme', 'light');
         }
     });
+
+    // Toggle Vault Settings Dropdown
+    vaultMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        vaultDropdown.classList.toggle('hidden');
+    });
+
+    // Close settings dropdown on click outside
+    document.addEventListener('click', () => {
+        vaultDropdown.classList.add('hidden');
+    });
+
+    // Dismiss Alert Modal
+    alertOkBtn.addEventListener('click', () => {
+        alertModal.style.display = 'none';
+    });
+
+    // Export Vault Click
+    exportBtn.addEventListener('click', async () => {
+        try {
+            const dataString = await vault.exportEntries();
+            const blob = new Blob([dataString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            // Format file name with current date
+            const dateStr = new Date().toISOString().split('T')[0];
+            const fileName = `dev-vault-backup-${dateStr}.json`;
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // Count entries
+            const entries = await vault.listEntries();
+            showAlert('✓', 'Vault Exported', `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} saved successfully.`, false);
+        } catch (err) {
+            console.error('Export failed:', err);
+            showAlert('✕', 'Export Failed', 'An error occurred while exporting the vault.', true);
+        }
+    });
+
+    // Import Vault Click: triggers file input
+    importBtn.addEventListener('click', () => {
+        importFileInput.click();
+    });
+
+    // Handle File Input Change
+    importFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const content = event.target.result;
+                const summary = await vault.importEntries(content);
+                
+                await renderSnippets();
+                
+                showAlert('✓', 'Import Complete', `Imported: ${summary.imported}\nSkipped: ${summary.skipped}\nFailed: ${summary.failed}`, false);
+            } catch (err) {
+                console.error('Import failed:', err);
+                showAlert('✕', 'Unable to import vault', err.message || 'The selected file is not a valid Dev-Vault backup.', true);
+            } finally {
+                importFileInput.value = ''; // Reset file input
+            }
+        };
+        reader.onerror = () => {
+            showAlert('✕', 'Unable to import vault', 'Error reading import file.', true);
+            importFileInput.value = '';
+        };
+        reader.readAsText(file);
+    });
+
+    // Show Alert Modal Helper
+    function showAlert(icon, title, message, isError) {
+        alertIcon.textContent = icon;
+        if (isError) {
+            alertIcon.classList.add('error');
+        } else {
+            alertIcon.classList.remove('error');
+        }
+        alertTitle.textContent = title;
+        alertMessage.textContent = message;
+        alertModal.style.display = 'flex';
+    }
 
     // Functions
     function closeModal() {

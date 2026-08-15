@@ -1,4 +1,5 @@
 import { createEntry, normalizeEntry } from './models.js';
+import { serializeVault, deserializeVault } from './serialization.js';
 
 export class Vault {
     constructor(repository) {
@@ -120,6 +121,9 @@ export class Vault {
     }
 
     async migrateFromLocalStorage() {
+        if (typeof localStorage === 'undefined') {
+            return;
+        }
         const migrationFlag = localStorage.getItem('dev_vault_migration');
         if (migrationFlag === 'v1') {
             return; // Already migrated
@@ -153,5 +157,41 @@ export class Vault {
         
         // Mark migration as complete
         localStorage.setItem('dev_vault_migration', 'v1');
+    }
+
+    async exportEntries() {
+        const entries = await this.repository.list();
+        return serializeVault(entries);
+    }
+
+    async importEntries(serializedString) {
+        let data;
+        try {
+            data = JSON.parse(serializedString);
+        } catch (err) {
+            throw new Error('Backup file must be a valid JSON format.');
+        }
+
+        const entriesToImport = deserializeVault(data);
+        let imported = 0;
+        let skipped = 0;
+        let failed = 0;
+
+        for (const entry of entriesToImport) {
+            try {
+                const existing = await this.repository.get(entry.id);
+                if (existing) {
+                    skipped++;
+                } else {
+                    await this.repository.create(entry);
+                    imported++;
+                }
+            } catch (err) {
+                console.error(`Failed to import entry ${entry.id}:`, err);
+                failed++;
+            }
+        }
+
+        return { imported, skipped, failed };
     }
 }
